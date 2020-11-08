@@ -14,7 +14,7 @@ from torch import optim
 from transformers import BertTokenizer, BertModel, BertConfig
 
 # Modules
-from .helpers import rdf_vocab_constructor
+from .helpers import rdf_vocab_constructor, get_max_sentence_len
 from models.decoder import Decoder
 
 # How many triples to train and test system on (min: 1, max: 7)
@@ -32,6 +32,7 @@ def predict(x,
             loss_fn,  #
             device,
             max_len=7,  #
+            max_sen_len=66,
             batch_size=32,  #
             teacher_forcing=0.,
             compute_grads=False,  #
@@ -64,13 +65,16 @@ def predict(x,
     # print('Got outputs:', outputs)
 
     # Retrieve hidden state to be passed into Decoder as annotation vectors
-    # Reshape to get a set of 8 feature vectors from last hidden state
-    annotations = outputs.last_hidden_state[:, -1, :].reshape(batch_size, 8, -1).to(device)
-    # print('Annotations size after cropping & reshape:', annotations.size())
+    # 0-padded vector containing a 768-dimensional feature representation per word
+    annotations = outputs.last_hidden_state
+    annotations_padded = torch.zeros([batch_size, max_sen_len, 768], dtype=torch.float32).to(device)
+    s = annotations.size()
+    print('Dims:', s, annotations_padded.size())
+    annotations_padded[:s[0], :s[1], :s[2]] = annotations
 
     # Init Decoder's hidden state
-    hidden = decoder.init_hidden(annotations).unsqueeze(0).to(device)
-    # print('Initial hidden size:', hidden.size(), 'given annotations:', annotations.size())
+    hidden = decoder.init_hidden(annotations_padded).unsqueeze(0).to(device)
+    print('Initial hidden size:', hidden.size(), 'given annotations:', annotations_padded.size())
 
     # Construct initial embedding (start tokens) per batch element
     embedding = word_embeddings(torch.zeros([batch_size], dtype=int).to(device)).to(device)
@@ -78,7 +82,7 @@ def predict(x,
     for t in range(max_len):
         # print('START OF ITERATION', t)
         # Get decodings (aka prob distrib. over output vocab per batch element) for time step t
-        prob_dist, hidden = decoder(annotations,  # Static vector containing annotations per batch element
+        prob_dist, hidden = decoder(annotations_padded,  # Static vector containing annotations per batch element
                                     embedding,  # Word embedding predicted last iteration (per batch element)
                                     hidden  # Decoder's hidden state of last iteratipn per batch element
                                     )
@@ -152,11 +156,11 @@ def training(train_data,
              minibatch_size=32,
              embedding_dim=300,
              eval_frequency=10,  # Every how many epochs to run intermediate evaluation
-             learning_rate_en=0.00001,
-             learning_rate_de=0.00001,
+             learning_rate_en=0.001,
+             learning_rate_de=0.0001,
              teacher_forcing_max=1.,
              teacher_forcing_min=0.1,
-             teacher_forcing_dec=0.01
+             teacher_forcing_dec=0.05
              ):
 
 
@@ -166,16 +170,19 @@ def training(train_data,
     # Construct tokenizer
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', device=device)
 
+    # Get max len of among sentences
+    max_sen_len = get_max_sentence_len(train_data, tokenizer=tokenizer)
+    print("Max sentence len is:", max_sen_len)
+
     # Construct embeddings
     rdf_vocab = nn.Embedding(num_embeddings=vocab_count, embedding_dim=embedding_dim, padding_idx=0).to(device)
 
     # Define model
     encoder = BertModel.from_pretrained('bert-base-uncased', return_dict=True).to(device)
     decoder = Decoder(
-        annotation_size=(8, 96),  # Size of annotation vectors produced by Encoder
-        out_vocab_size=vocab_count,  # How many words there are in the RDF-output language
+        annotation_size=(max_sen_len, 768),  # Size of annotation vectors produced by Encoder
         embedding_dim=300,  # Length of a word embedding
-        hidden_dim=96,  # Nr hidden nodes
+        hidden_dim=768,  # Nr hidden nodes
         output_dim=vocab_count,  # Vocab size
     ).to(device)
 
@@ -249,6 +256,7 @@ def training(train_data,
                                  loss,  #
                                  device=device,
                                  max_len=num_preds,  # Nr of tokens to be predicted
+                                 max_sen_len=max_sen_len,
                                  batch_size=32,  #
                                  compute_grads=True,  #
                                  targets=targets,  #

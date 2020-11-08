@@ -13,10 +13,9 @@ class Decoder(nn.Module):
 
     def __init__(self,
                  annotation_size,  # Size of annotation vectors produced by Encoder
-                 out_vocab_size,  # How many words there are in the RDF-output language
                  embedding_dim,  # Length of a word embedding
                  hidden_dim,  # Nr hidden nodes
-                 output_dim,  # Vocab size
+                 output_dim,  # Vocab size (How many words there are in the RDF-output language)
                  bidirectional=False,  # Whether to have bidirectional GRU
                  n_layers=1,  # Nr layers in GRU
                  drop_prob=0.2  # Percent of node-dropouts

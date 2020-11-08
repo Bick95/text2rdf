@@ -20,6 +20,22 @@ def rdf_vocab_constructor(raw_vocab):
     return vocab_count, word2idx, idx2word
 
 
+def get_max_sentence_len(raw_vocab, tokenizer, min_nr_triples=1, max_nr_triples=1):
+    longest_len = 0
+    for nt in range(min_nr_triples-1, max_nr_triples):
+        print("Checking nr of triples:", nt+1, '(for len)')
+        for entry in raw_vocab[nt]:
+            l = tokenizer([entry['text']],
+                               return_tensors="pt",  # Return tensors in pt=PyTorch format
+                               padding=False,  # Pad all sentences in mini-batch to have the same length
+                               add_special_tokens=True)['input_ids'].size()[1]
+            if l > longest_len:
+                print('Longer sentence of len', l, ':', entry['text'])
+                print('Corresponding triple:', entry['triple'])
+                longest_len = l
+    return longest_len
+
+
 # Function for calculating the BLEU score for multiple sentence.
 def calculate_bleu(data, train, dev, test, model, max_len=7):
     trgs = []
