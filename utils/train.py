@@ -33,11 +33,16 @@ def predict(x,
             device,
             max_len=7,  #
             batch_size=32,  #
+            teacher_forcing=0.,
             compute_grads=False,  #
             targets=None,  #
             return_textual=False  # Whether to return predictions in index-form (default) or as textual strings
             ):
     print('In predict:')
+
+    if teacher_forcing:
+        # Stochastically determine whether to apply teacher forcing in current iteration
+        teacher_forcing = random.random() < teacher_forcing
 
     accumulated_loss = 0.
 
@@ -67,14 +72,14 @@ def predict(x,
     hidden = decoder.init_hidden(annotations).unsqueeze(0).to(device)
     # print('Initial hidden size:', hidden.size(), 'given annotations:', annotations.size())
 
-    # Construct initial embeddings (start tokens)
-    embeddings = word_embeddings(torch.zeros([batch_size], dtype=int).to(device)).to(device)
+    # Construct initial embedding (start tokens) per batch element
+    embedding = word_embeddings(torch.zeros([batch_size], dtype=int).to(device)).to(device)
 
     for t in range(max_len):
         # print('START OF ITERATION', t)
         # Get decodings (aka prob distrib. over output vocab per batch element) for time step t
         prob_dist, hidden = decoder(annotations,  # Static vector containing annotations per batch element
-                                    embeddings,  # Word embedding predicted last iteration (per batch element)
+                                    embedding,  # Word embedding predicted last iteration (per batch element)
                                     hidden  # Decoder's hidden state of last iteratipn per batch element
                                     )
 
@@ -82,10 +87,16 @@ def predict(x,
         word_index = torch.max(prob_dist, dim=1).indices
         # print('Predicted word indices batch:', word_index)
 
-        # Get corresponding word embedding (by index; per batch element)
-        embedding = word_embeddings(word_index.to(device))
+        if teacher_forcing:
+            print('Teacher Forcing')
+            # Apply teacher forcing & pretend network had predicted correct tokens previously
+            embedding = word_embeddings(targets[:, t])
 
-        # TODO: optional teacher forcing?
+        else:
+            print('No Teacher Forcing')
+            # Get corresponding, predicted word embedding (by index; per batch element)
+            embedding = word_embeddings(word_index.to(device))
+
 
         # Record predicted words
         predicted_indices[:, t] = word_index
@@ -107,8 +118,11 @@ def predict(x,
             # Compute (averaged over all batch elements given current time step t)
             loss = loss_fn(prob_dist, targets[:, t]).to(device)
 
+            # Retain computational graph through all but last backward pass
+            retain_graph = not t == max_len-1
+
             # Compute & back-propagate gradients
-            loss.backward(retain_graph=True)
+            loss.backward(retain_graph=retain_graph)
 
             # Document loss
             accumulated_loss += loss.item()
@@ -140,6 +154,9 @@ def training(train_data,
              eval_frequency=10,  # Every how many epochs to run intermediate evaluation
              learning_rate_en=0.00001,
              learning_rate_de=0.00001,
+             teacher_forcing_max=1.,
+             teacher_forcing_min=0.1,
+             teacher_forcing_dec=0.01
              ):
 
 
@@ -162,6 +179,8 @@ def training(train_data,
         output_dim=vocab_count,  # Vocab size
     ).to(device)
 
+    teacher_forcing = teacher_forcing_max
+
     # Optimizer
     encoder_optimizer = optim.Adam(encoder.parameters(), lr=learning_rate_en)
     decoder_optimizer = optim.Adam(decoder.parameters(), lr=learning_rate_de)
@@ -181,6 +200,8 @@ def training(train_data,
     # Train
     for epoch in range(epochs):
         print('Epoch:', epoch)
+
+        # TODO: for each epoch, iterate through data multiple times
 
         train_loss, eval_loss = 0., 0.
 
@@ -231,14 +252,15 @@ def training(train_data,
                                  batch_size=32,  #
                                  compute_grads=True,  #
                                  targets=targets,  #
-                                 return_textual=True
+                                 return_textual=True,
+                                 teacher_forcing=teacher_forcing
                                  # Whether to return predictions in index-form (default) or as textual strings
                                  )
 
-            print('Return object:', ret_object)
+            # print('Return object:', ret_object)
             print("Predicted texts:", ret_object['predicted_words'])
             train_loss += ret_object['loss']
-            # print("Returned loss:", ret_object['loss'])
+            print("Iteration loss:", ret_object['loss'])
 
         # Apply gradients
         encoder_optimizer.step()
@@ -249,5 +271,7 @@ def training(train_data,
 
         # Save losses
         train_losses[epoch] = train_loss
+
+        teacher_forcing = max(teacher_forcing_min, teacher_forcing-teacher_forcing_dec)
 
     return train_losses, val_losses, encoder, decoder
