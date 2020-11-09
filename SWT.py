@@ -26,7 +26,7 @@ def main():
     train, train_stats, dev, dev_stats = get_dev_vocab(train, train_stats)
 
     # Train
-    train_losses, val_losses, encoder, decoder = training(train, dev, device=device, epochs=100)
+    train_losses, val_losses, encoder, decoder = training(train, dev, device=device, epochs=1000)
     print('Train losses:', train_losses)
 
 

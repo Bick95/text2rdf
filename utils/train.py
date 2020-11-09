@@ -69,12 +69,10 @@ def predict(x,
     annotations = outputs.last_hidden_state
     annotations_padded = torch.zeros([batch_size, max_sen_len, 768], dtype=torch.float32).to(device)
     s = annotations.size()
-    print('Dims:', s, annotations_padded.size())
     annotations_padded[:s[0], :s[1], :s[2]] = annotations
 
     # Init Decoder's hidden state
     hidden = decoder.init_hidden(annotations_padded).unsqueeze(0).to(device)
-    print('Initial hidden size:', hidden.size(), 'given annotations:', annotations_padded.size())
 
     # Construct initial embedding (start tokens) per batch element
     embedding = word_embeddings(torch.zeros([batch_size], dtype=int).to(device)).to(device)
@@ -92,12 +90,10 @@ def predict(x,
         # print('Predicted word indices batch:', word_index)
 
         if teacher_forcing:
-            print('Teacher Forcing')
             # Apply teacher forcing & pretend network had predicted correct tokens previously
             embedding = word_embeddings(targets[:, t])
 
         else:
-            print('No Teacher Forcing')
             # Get corresponding, predicted word embedding (by index; per batch element)
             embedding = word_embeddings(word_index.to(device))
 
@@ -121,9 +117,6 @@ def predict(x,
 
             # Compute (averaged over all batch elements given current time step t)
             loss = loss_fn(torch.log(prob_dist), targets[:, t]).to(device)
-            print("Loss:", loss)
-            print('Actual:', torch.log(prob_dist))
-            print(("Targets:", targets[:, t]))
 
             # Retain computational graph through all but last backward pass
             retain_graph = not t == max_len-1
@@ -133,22 +126,20 @@ def predict(x,
 
             # Document loss
             accumulated_loss += loss.detach().item()
-        # print('END OF ITERATION', t)
 
     ret_object = {
         'predicted_indices': predicted_indices,
     }
 
-    print('Targets:\n', targets)
-    print('Predicted idxs:\n', predicted_indices)
-
     if compute_grads:
         ret_object['loss'] = accumulated_loss
-        # print('Accumulated loss:', accumulated_loss)
     if return_textual:
         ret_object['predicted_words'] = predicted_words
-        # print("Predicted words:", predicted_words)
-    # print("Returning from predict")
+        print("Predicted words:\n", predicted_words)
+        print('Targets:\n', targets)
+
+    print('Predicted idxs:\n', predicted_indices)
+
     return ret_object
 
 
@@ -159,8 +150,8 @@ def training(train_data,
              minibatch_size=32,
              embedding_dim=300,
              eval_frequency=10,  # Every how many epochs to run intermediate evaluation
-             learning_rate_en=0.0001,
-             learning_rate_de=0.00001,
+             learning_rate_en=0.00001,
+             learning_rate_de=0.0001,
              teacher_forcing_max=1.,
              teacher_forcing_min=0.1,
              teacher_forcing_dec=0.05
@@ -248,6 +239,20 @@ def training(train_data,
             # print('Processed targets:', targets)
             # print('Predicting:')
 
+            if epoch % eval_frequency is 0:
+                # Print trainable parameter stats
+                for name, param in decoder.named_parameters():
+                    if param.requires_grad:
+                        print('Params - Name:', name,
+                              'mean:', torch.mean(param.data),
+                              'max:', torch.max(param.data),
+                              'min:', torch.min(param.data))
+                # Print input sentences
+                print('Input sentences:\n', inputs)
+                return_textual = True
+            else:
+                return_textual = False
+
             # Predict
             ret_object = predict(inputs,
                                  rdf_vocab,  # Decoder's word embeddings
@@ -263,13 +268,13 @@ def training(train_data,
                                  batch_size=32,  #
                                  compute_grads=True,  #
                                  targets=targets,  #
-                                 return_textual=True,
+                                 return_textual=return_textual,
                                  teacher_forcing=teacher_forcing
                                  # Whether to return predictions in index-form (default) or as textual strings
                                  )
 
             # print('Return object:', ret_object)
-            print("Predicted texts:", ret_object['predicted_words'])
+            #print("Predicted texts:", ret_object['predicted_words'])
             train_loss += ret_object['loss']
             print("Iteration loss:", ret_object['loss'])
 

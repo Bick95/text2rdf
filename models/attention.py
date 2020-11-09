@@ -23,9 +23,6 @@ class SoftAttention(nn.Module):
         # Layers
         self.attn = nn.Linear(self.annotation_features + self.hidden_size, 1, bias=True)
         self.softmax = nn.Softmax(dim=1)
-        print('an size:', annotation_size)  # max_sen_len x 768
-        print('an features (768?):', self.annotation_features)  # 768
-        print('hid size:', hidden_len)     # 768
 
     def forward(self, annotations, prev_hidden):
         # Repeat prev_hidded X times to append it to each of the annotation vectors (per batch element)
@@ -38,7 +35,6 @@ class SoftAttention(nn.Module):
 
         # Append previous hidden state to all annotation vectors (for each individual batch element)
         # Input to attention weight calculation
-        print('SA:', annotations.size(), repeated_hidden.size())
         input = torch.cat((annotations, repeated_hidden), dim=2)
         # print('Input size:', input.size())
         # print(self.attn)
