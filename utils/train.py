@@ -120,7 +120,10 @@ def predict(x,
             # print('targets:', targets[:, t].size(), targets[:, t])
 
             # Compute (averaged over all batch elements given current time step t)
-            loss = loss_fn(prob_dist, targets[:, t]).to(device)
+            loss = loss_fn(torch.log(prob_dist), targets[:, t]).to(device)
+            print("Loss:", loss)
+            print('Actual:', torch.log(prob_dist))
+            print(("Targets:", targets[:, t]))
 
             # Retain computational graph through all but last backward pass
             retain_graph = not t == max_len-1
@@ -129,7 +132,7 @@ def predict(x,
             loss.backward(retain_graph=retain_graph)
 
             # Document loss
-            accumulated_loss += loss.item()
+            accumulated_loss += loss.detach().item()
         # print('END OF ITERATION', t)
 
     ret_object = {
@@ -156,8 +159,8 @@ def training(train_data,
              minibatch_size=32,
              embedding_dim=300,
              eval_frequency=10,  # Every how many epochs to run intermediate evaluation
-             learning_rate_en=0.001,
-             learning_rate_de=0.0001,
+             learning_rate_en=0.0001,
+             learning_rate_de=0.00001,
              teacher_forcing_max=1.,
              teacher_forcing_min=0.1,
              teacher_forcing_dec=0.05
@@ -192,7 +195,7 @@ def training(train_data,
     encoder_optimizer = optim.Adam(encoder.parameters(), lr=learning_rate_en)
     decoder_optimizer = optim.Adam(decoder.parameters(), lr=learning_rate_de)
 
-    loss = nn.CrossEntropyLoss()
+    loss = nn.NLLLoss(reduction='mean').cuda()
 
     # For both train and validation data & for all number of tuples per sentence
     # (in [MIN_NUM_TRIPLES, MAX_NUM_TRIPLES]), get the nr of train-/test instances
