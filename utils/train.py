@@ -257,6 +257,10 @@ def training(train_data,
             train_loss += ret_object['loss']
             print("Iteration loss:", ret_object['loss'])
 
+            if epoch % eval_frequency is 0:
+                print('Percent correctly predicted:',
+                      (torch.eq(targets, ret_object['predicted_indices']).sum() / (minibatch_size * num_preds)).item())
+
         # Apply gradients
         encoder_optimizer.step()
         decoder_optimizer.step()
