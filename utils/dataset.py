@@ -25,9 +25,9 @@ TEST_DIRS = [TEST_PATH + str(i) + 'triples/' for i in range(MIN_NUM_TRIPLES, MAX
 print('Train dirs:', TRAIN_DIRS)
 print('Test  dirs:', TEST_DIRS)
 
-originaltripleset_index = 0  # Index of 'originaltripleset' attribute in XML entry
-modifiedtripleset_index = 1  # Index of 'modifiedtripleset' attribute in XML entry
-first_lexical_index = 2  # Index as of which verbalizations of RDF triples start in entry
+originaltripleset_index = 0     # Index of 'originaltripleset' attribute in XML entry
+modifiedtripleset_index = 1     # Index of 'modifiedtripleset' attribute in XML entry
+first_lexical_index = 2         # Index as of which verbalizations of RDF triples start in entry
 
 
 # Train Data
@@ -44,7 +44,6 @@ def get_train_vocab():
 
         for filename in glob.iglob(d + '/**', recursive=False):
             if os.path.isfile(filename):  # Filter dirs
-                # print('File:', filename)
 
                 tree = ET.parse(filename)
                 root = tree.getroot()
@@ -53,8 +52,6 @@ def get_train_vocab():
                 train_stats[nr_triples - MIN_NUM_TRIPLES] += len(entries)
 
                 for entry in entries:
-                    # print('Original triple set: ', entry[originaltripleset_index])
-                    # print('Modified triple set: ', entry[modifiedtripleset_index])
 
                     modified_triple_set = entry[modifiedtripleset_index]
                     unified_triple_set = []
@@ -69,8 +66,6 @@ def get_train_vocab():
                     for verbalization in verbalizations:
                         if verbalization.text.strip() == '':
                             continue
-                        # print('Text:', verbalization, verbalization.tag, verbalization.attrib, verbalization.text)
-                        # print('Trip:', triple, triple.tag, triple.attrib, triple.text)
 
                         train[i].append({'category': entry.attrib['category'],
                                          'id': entry.attrib['eid'],
@@ -98,7 +93,6 @@ def get_test_vocab():
 
         for filename in glob.iglob(d + '/**', recursive=False):
             if os.path.isfile(filename):  # Filter dirs
-                # print('File:', filename)
 
                 tree = ET.parse(filename)
                 root = tree.getroot()
@@ -107,8 +101,6 @@ def get_test_vocab():
                 test_stats[nr_triples - MIN_NUM_TRIPLES] += len(entries)
 
                 for entry in entries:
-                    # print('Original triple set: ', entry[originaltripleset_index])
-                    # print('Modified triple set: ', entry[modifiedtripleset_index])
 
                     modified_triple_set = entry[modifiedtripleset_index]
                     unified_triple_set = []
@@ -123,8 +115,6 @@ def get_test_vocab():
                     for verbalization in verbalizations:
                         if verbalization.text.strip() == '':
                             continue
-                        # print('Text:', verbalization, verbalization.tag, verbalization.attrib, verbalization.text)
-                        # print('Trip:', triple, triple.tag, triple.attrib, triple.text)
 
                         test[i].append({'category': entry.attrib['category'],
                                         'id': entry.attrib['eid'],

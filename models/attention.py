@@ -36,15 +36,11 @@ class SoftAttention(nn.Module):
         # Append previous hidden state to all annotation vectors (for each individual batch element)
         # Input to attention weight calculation
         input = torch.cat((annotations, repeated_hidden), dim=2)
-        # print('Input size:', input.size())
-        # print(self.attn)
 
         # Compute the relative attention scores per feaure (e_{ti}=f_{att}(a_i,h_{t−1}) from paper)
         energies = self.attn(input)
 
-        # print('energies...')
-
         # Compute final attention weights (i.e. alpha)
         attn_weights = self.softmax(energies)
-        # print('attn_weights:', attn_weights.size())
+
         return attn_weights

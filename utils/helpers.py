@@ -26,9 +26,9 @@ def get_max_sentence_len(raw_vocab, tokenizer, min_nr_triples=1, max_nr_triples=
         print("Checking nr of triples:", nt+1, '(for len)')
         for entry in raw_vocab[nt]:
             l = tokenizer([entry['text']],
-                               return_tensors="pt",  # Return tensors in pt=PyTorch format
-                               padding=False,  # Pad all sentences in mini-batch to have the same length
-                               add_special_tokens=True)['input_ids'].size()[1]
+                          return_tensors="pt",  # Return tensors in pt=PyTorch format
+                          padding=False,  # Pad all sentences in mini-batch to have the same length
+                          add_special_tokens=True)['input_ids'].size()[1]
             if l > longest_len:
                 print('Longer sentence of len', l, ':', entry['text'])
                 print('Corresponding triple:', entry['triple'])

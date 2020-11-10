@@ -216,28 +216,18 @@ def training(train_data,
 
             # Sample minibatch indices
             minibatch_idx = random.sample(population=range(len_x_train[i]), k=minibatch_size)
-            # print('MB indices:', minibatch_idx)
 
             # Number of tokens to be predicted (per batch element)
             num_preds = nt * 3 + 1  # = nr triples * 3 + stop_token
-            # print('Number of predictions:', num_preds)
 
             # Construct proper minibatch
             inputs = [train_data[i][idx]['text'] for idx in minibatch_idx]
             targets = torch.ones([minibatch_size, num_preds], dtype=int).to(device)
 
-            # print('Inputs:', inputs)
-            # print('Targets:', targets)
-
             for mb_i, idx in enumerate(minibatch_idx):
-                # print('Text:', train_data[i][idx]['text'])
-                # print('Triple:', train_data[i][idx]['triple'])
                 for t, token in enumerate(train_data[i][idx]['triple']):
                     targets[mb_i, t] = word2idx[token]
             targets[:, -1] = 2  # 2 = Stop word index
-
-            # print('Processed targets:', targets)
-            # print('Predicting:')
 
             if epoch % eval_frequency is 0:
                 # Print trainable parameter stats
@@ -256,32 +246,28 @@ def training(train_data,
             # Predict
             ret_object = predict(inputs,
                                  rdf_vocab,  # Decoder's word embeddings
-                                 word2idx,  #
-                                 idx2word,  #
-                                 encoder,  #
-                                 decoder,  #
-                                 tokenizer,  #
-                                 loss,  #
+                                 word2idx,
+                                 idx2word,
+                                 encoder,
+                                 decoder,
+                                 tokenizer,
+                                 loss,
                                  device=device,
                                  max_len=num_preds,  # Nr of tokens to be predicted
                                  max_sen_len=max_sen_len,
-                                 batch_size=32,  #
-                                 compute_grads=True,  #
-                                 targets=targets,  #
+                                 batch_size=32,
+                                 compute_grads=True,
+                                 targets=targets,
                                  return_textual=return_textual,
                                  teacher_forcing=teacher_forcing
-                                 # Whether to return predictions in index-form (default) or as textual strings
                                  )
 
-            # print('Return object:', ret_object)
-            #print("Predicted texts:", ret_object['predicted_words'])
             train_loss += ret_object['loss']
             print("Iteration loss:", ret_object['loss'])
 
         # Apply gradients
         encoder_optimizer.step()
         decoder_optimizer.step()
-        # print('Optimizations performed.')
 
         # Intermediate evaluation
 
