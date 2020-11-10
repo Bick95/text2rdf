@@ -7,11 +7,18 @@ import torch
 
 # Modules
 from utils.train import training
-from utils.dataset import get_train_vocab, get_dev_vocab, get_test_vocab
+from utils.dataset import get_train_vocab, get_dev_vocab, get_test_vocab, print_stats
 
 # CUDA related
 device = torch.device('cuda')
 print("Device:", device)
+
+
+# How many triples to train and test system on (min: 1, max: 7)
+MIN_NUM_TRIPLES = 1
+MAX_NUM_TRIPLES = 3
+
+MINIBATCH_UPDATES = 1000
 
 
 def main():
@@ -21,12 +28,21 @@ def main():
         torch.cuda.empty_cache()
 
     # Get datasets
-    train, train_stats = get_train_vocab()
-    test, test_stats = get_test_vocab()
-    train, train_stats, dev, dev_stats = get_dev_vocab(train, train_stats)
+    train, train_stats = get_train_vocab(min_num_triples=MIN_NUM_TRIPLES, max_num_triples=MAX_NUM_TRIPLES)
+    test, test_stats = get_test_vocab(min_num_triples=MIN_NUM_TRIPLES, max_num_triples=MAX_NUM_TRIPLES)
+    train, train_stats, dev, dev_stats = get_dev_vocab(train, train_stats,
+                                                       min_num_triples=MIN_NUM_TRIPLES, max_num_triples=MAX_NUM_TRIPLES)
+
+    print_stats(train, dev, test, min_num_triples=MIN_NUM_TRIPLES, max_num_triples=MAX_NUM_TRIPLES)
 
     # Train
-    train_losses, val_losses, encoder, decoder = training(train, dev, device=device, epochs=1000)
+    train_losses, val_losses, encoder, decoder = training(train,
+                                                          dev,
+                                                          device=device,
+                                                          minibatch_updates=MINIBATCH_UPDATES,
+                                                          min_nr_triples=MIN_NUM_TRIPLES,
+                                                          max_nr_triples=MAX_NUM_TRIPLES
+                                                          )
     print('Train losses:', train_losses)
 
 

@@ -17,10 +17,6 @@ from transformers import BertTokenizer, BertModel, BertConfig
 from .helpers import rdf_vocab_constructor, get_max_sentence_len
 from models.decoder import Decoder
 
-# How many triples to train and test system on (min: 1, max: 7)
-MIN_NUM_TRIPLES = 1
-MAX_NUM_TRIPLES = 1
-
 
 def predict(x,
             word_embeddings,  # Decoder's word embeddings
@@ -39,7 +35,6 @@ def predict(x,
             targets=None,  #
             return_textual=False  # Whether to return predictions in index-form (default) or as textual strings
             ):
-    print('In predict:')
 
     if teacher_forcing:
         # Stochastically determine whether to apply teacher forcing in current iteration
@@ -62,7 +57,6 @@ def predict(x,
 
     # Encode sentences: Pass tokenization output-dict-contents to model
     outputs = encoder(**inputs)
-    # print('Got outputs:', outputs)
 
     # Retrieve hidden state to be passed into Decoder as annotation vectors
     # 0-padded vector containing a 768-dimensional feature representation per word
@@ -78,7 +72,6 @@ def predict(x,
     embedding = word_embeddings(torch.zeros([batch_size], dtype=int).to(device)).to(device)
 
     for t in range(max_len):
-        # print('START OF ITERATION', t)
         # Get decodings (aka prob distrib. over output vocab per batch element) for time step t
         prob_dist, hidden = decoder(annotations_padded,  # Static vector containing annotations per batch element
                                     embedding,  # Word embedding predicted last iteration (per batch element)
@@ -87,7 +80,6 @@ def predict(x,
 
         # Get predicted word index from predicted probability distribution (per batch element)
         word_index = torch.max(prob_dist, dim=1).indices
-        # print('Predicted word indices batch:', word_index)
 
         if teacher_forcing:
             # Apply teacher forcing & pretend network had predicted correct tokens previously
@@ -100,7 +92,6 @@ def predict(x,
 
         # Record predicted words
         predicted_indices[:, t] = word_index
-        # print('Predicted indices:', predicted_indices)
 
         # Record textual words if required
         if return_textual:
@@ -112,8 +103,6 @@ def predict(x,
                 predicted_words[e] += (predicted_word[e] + ' ')
 
         if compute_grads:
-            # print('prob_dist:', prob_dist.size())
-            # print('targets:', targets[:, t].size(), targets[:, t])
 
             # Compute (averaged over all batch elements given current time step t)
             loss = loss_fn(torch.log(prob_dist), targets[:, t]).to(device)
@@ -138,23 +127,25 @@ def predict(x,
         print("Predicted words:\n", predicted_words)
         print('Targets:\n', targets)
 
-    print('Predicted idxs:\n', predicted_indices)
+        print('Predicted idxs:\n', predicted_indices)
 
     return ret_object
 
 
 def training(train_data,
              val_data,
-             epochs,
+             minibatch_updates,
              device,
              minibatch_size=32,
              embedding_dim=300,
-             eval_frequency=10,  # Every how many epochs to run intermediate evaluation
+             eval_frequency=10,  # Every how many minibatch_updates to run intermediate evaluation
              learning_rate_en=0.00001,
              learning_rate_de=0.0001,
              teacher_forcing_max=1.,
              teacher_forcing_min=0.1,
-             teacher_forcing_dec=0.05
+             teacher_forcing_dec=0.05,
+             min_nr_triples=1,
+             max_nr_triples=3
              ):
 
 
@@ -165,7 +156,10 @@ def training(train_data,
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', device=device)
 
     # Get max len of among sentences
-    max_sen_len = get_max_sentence_len(train_data, tokenizer=tokenizer)
+    max_sen_len = get_max_sentence_len(train_data,
+                                       tokenizer=tokenizer,
+                                       min_nr_triples=min_nr_triples,
+                                       max_nr_triples=max_nr_triples)
     print("Max sentence len is:", max_sen_len)
 
     # Construct embeddings
@@ -194,15 +188,12 @@ def training(train_data,
     len_x_val = [len(val_set) for val_set in val_data]
 
     # Development of both train- and validation losses over course of training
-    train_losses, val_losses = [0.] * epochs, [0.] * epochs
+    train_losses, val_losses = [0.] * minibatch_updates, [0.] * minibatch_updates
 
     print('Starting training.')
 
     # Train
-    for epoch in range(epochs):
-        print('Epoch:', epoch)
-
-        # TODO: for each epoch, iterate through data multiple times
+    for epoch in range(minibatch_updates):
 
         train_loss, eval_loss = 0., 0.
 
@@ -211,8 +202,9 @@ def training(train_data,
         decoder_optimizer.zero_grad()
 
         # Perform own train step for each nr of triples per sentence separately
-        for i, nt in enumerate(range(MIN_NUM_TRIPLES, MAX_NUM_TRIPLES + 1)):
-            print(str(i) + '. Condition:', nt, 'triples per sentence.')
+        for nt in range(min_nr_triples, max_nr_triples + 1):
+            i = nt - 1  # Num triples per sentence starts at 1, while indexing starts at 0
+            print('Epoch:', str(epoch) + ',', str(i) + '. Condition:', nt, 'triples per sentence.')
 
             # Sample minibatch indices
             minibatch_idx = random.sample(population=range(len_x_train[i]), k=minibatch_size)

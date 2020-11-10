@@ -8,22 +8,11 @@ import glob
 import random
 import xml.etree.ElementTree as ET
 
-# How many triples to train and test system on (min: 1, max: 7)
-MIN_NUM_TRIPLES = 1
-MAX_NUM_TRIPLES = 1
-
 # Set paths where to retrieve data from
 DS_BASE_PATH = './WebNLG/'
 
 TRAIN_PATH = DS_BASE_PATH + 'train/'
 TEST_PATH = DS_BASE_PATH + 'dev/'
-
-TRAIN_DIRS = [TRAIN_PATH + str(i) + 'triples/' for i in range(MIN_NUM_TRIPLES, MAX_NUM_TRIPLES + 1)]
-TEST_DIRS = [TEST_PATH + str(i) + 'triples/' for i in range(MIN_NUM_TRIPLES, MAX_NUM_TRIPLES + 1)]
-
-# Print selected directories
-print('Train dirs:', TRAIN_DIRS)
-print('Test  dirs:', TEST_DIRS)
 
 originaltripleset_index = 0     # Index of 'originaltripleset' attribute in XML entry
 modifiedtripleset_index = 1     # Index of 'modifiedtripleset' attribute in XML entry
@@ -31,16 +20,19 @@ first_lexical_index = 2         # Index as of which verbalizations of RDF triple
 
 
 # Train Data
-def get_train_vocab():
+def get_train_vocab(min_num_triples, max_num_triples):
+    train_dirs = [TRAIN_PATH + str(i) + 'triples/' for i in range(min_num_triples, max_num_triples + 1)]
+    print('Train dirs:', train_dirs)
+
     # Usage of train: train[target_nr_triples][element_id]['target_attribute']
-    train = [[] for i in range(MIN_NUM_TRIPLES, MAX_NUM_TRIPLES + 1)]
+    train = [[] for i in range(min_num_triples, max_num_triples + 1)]
 
     # Documents how many entries there are per number of triples
-    train_stats = [0 for i in range(MIN_NUM_TRIPLES, MAX_NUM_TRIPLES + 1)]
+    train_stats = [0 for i in range(min_num_triples, max_num_triples + 1)]
 
     # Iterate through all files per number of triples and per category and load data
-    for i, d in enumerate(TRAIN_DIRS):
-        nr_triples = list(range(MIN_NUM_TRIPLES, MAX_NUM_TRIPLES + 1))[i]
+    for i, d in enumerate(train_dirs):
+        nr_triples = list(range(min_num_triples, max_num_triples + 1))[i]
 
         for filename in glob.iglob(d + '/**', recursive=False):
             if os.path.isfile(filename):  # Filter dirs
@@ -49,7 +41,7 @@ def get_train_vocab():
                 root = tree.getroot()
 
                 entries = root[0]
-                train_stats[nr_triples - MIN_NUM_TRIPLES] += len(entries)
+                train_stats[nr_triples - min_num_triples] += len(entries)
 
                 for entry in entries:
 
@@ -80,16 +72,19 @@ def get_train_vocab():
 
 
 # Test Data
-def get_test_vocab():
+def get_test_vocab(min_num_triples, max_num_triples):
+    train_dirs = [TEST_PATH + str(i) + 'triples/' for i in range(min_num_triples, max_num_triples + 1)]
+    print('Test  dirs:', train_dirs)
+
     # Usage of test: test[target_nr_triples][element_id]['target_attribute']
-    test = [[] for i in range(MIN_NUM_TRIPLES, MAX_NUM_TRIPLES + 1)]
+    test = [[] for i in range(min_num_triples, max_num_triples + 1)]
 
     # Documents how many entries there are per number of triples
-    test_stats = [0 for i in range(MIN_NUM_TRIPLES, MAX_NUM_TRIPLES + 1)]
+    test_stats = [0 for i in range(min_num_triples, max_num_triples + 1)]
 
     # Iterate through all files per number of triples and per category and load data
-    for i, d in enumerate(TEST_DIRS):
-        nr_triples = list(range(MIN_NUM_TRIPLES, MAX_NUM_TRIPLES + 1))[i]
+    for i, d in enumerate(train_dirs):
+        nr_triples = list(range(min_num_triples, max_num_triples + 1))[i]
 
         for filename in glob.iglob(d + '/**', recursive=False):
             if os.path.isfile(filename):  # Filter dirs
@@ -98,7 +93,7 @@ def get_test_vocab():
                 root = tree.getroot()
 
                 entries = root[0]
-                test_stats[nr_triples - MIN_NUM_TRIPLES] += len(entries)
+                test_stats[nr_triples - min_num_triples] += len(entries)
 
                 for entry in entries:
 
@@ -129,26 +124,26 @@ def get_test_vocab():
 
 
 # Spilt Train Data into Train and Dev (for intermindiate validation throughout training)
-def get_dev_vocab(train, train_stats, dp=0.15):
+def get_dev_vocab(train, train_stats, min_num_triples, max_num_triples, dp=0.15):
     # Percentage of train data reserved for validation throughout training
     dev_percentage = dp
 
     # Init dev dataset
-    dev = [[] for i in range(MIN_NUM_TRIPLES, MAX_NUM_TRIPLES + 1)]
+    dev = [[] for i in range(min_num_triples, max_num_triples + 1)]
 
     # Sample number of dev instances per number of triples
-    dev_stats = [int(dev_percentage * train_stats[i]) for i in range(0, MAX_NUM_TRIPLES + 1 - MIN_NUM_TRIPLES)]
+    dev_stats = [int(dev_percentage * train_stats[i]) for i in range(0, max_num_triples + 1 - min_num_triples)]
 
     print('Samples per nr of triples:', dev_stats)
 
     # Sample indices to be reserved for dev dataset for each nr of triples
     dev_indices = [random.sample(range(0, len(train[i])), dev_stats[i]) for i in
-                   range(0, MAX_NUM_TRIPLES + 1 - MIN_NUM_TRIPLES)]
+                   range(0, max_num_triples + 1 - min_num_triples)]
     for i in range(len(dev_indices)):
         dev_indices[i].sort(reverse=True)
 
     # Copy selected dev-entries into dev & delete all duplicates/related entries from train dataset
-    for nr_triples in range(0, MAX_NUM_TRIPLES + 1 - MIN_NUM_TRIPLES):
+    for nr_triples in range(0, max_num_triples + 1 - min_num_triples):
 
         # Iterate through all indices reserved for validation set (per nr of triples)
         for index in dev_indices[nr_triples]:
@@ -174,28 +169,28 @@ def get_dev_vocab(train, train_stats, dp=0.15):
 
 
 # Print Stats
-def print_stats(train, dev, test):
-    print('Minimal number of triples:', MIN_NUM_TRIPLES)
-    print('Maximal number of triples:', MAX_NUM_TRIPLES)
+def print_stats(train, dev, test, min_num_triples, max_num_triples):
+    print('Minimal number of triples:', min_num_triples)
+    print('Maximal number of triples:', max_num_triples)
 
     print()
 
     print('Training: ')
-    for nr_triples in range(MIN_NUM_TRIPLES, MAX_NUM_TRIPLES + 1):
+    for nr_triples in range(min_num_triples, max_num_triples + 1):
         print('Given %i triples per sentence: ' % nr_triples)
-        print('Number of combinations of triples and verbalizations:', len(train[nr_triples - MIN_NUM_TRIPLES]))
+        print('Number of combinations of triples and verbalizations:', len(train[nr_triples - min_num_triples]))
 
     print()
 
     print('Dev: ')
-    for nr_triples in range(MIN_NUM_TRIPLES, MAX_NUM_TRIPLES + 1):
+    for nr_triples in range(min_num_triples, max_num_triples + 1):
         print('Given %i triples per sentence: ' % nr_triples)
-        print('Number of combinations of triples and verbalizations:', len(dev[nr_triples - MIN_NUM_TRIPLES]))
+        print('Number of combinations of triples and verbalizations:', len(dev[nr_triples - min_num_triples]))
 
     print()
 
     print('Testing: ')
-    for nr_triples in range(MIN_NUM_TRIPLES, MAX_NUM_TRIPLES + 1):
+    for nr_triples in range(min_num_triples, max_num_triples + 1):
         print('Given %i triples per sentence: ' % nr_triples)
-        print('Number of combinations of triples and verbalizations:', len(test[nr_triples - MIN_NUM_TRIPLES]))
+        print('Number of combinations of triples and verbalizations:', len(test[nr_triples - min_num_triples]))
 
