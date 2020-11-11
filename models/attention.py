@@ -26,7 +26,6 @@ class SoftAttention(nn.Module):
 
     def forward(self, annotations, prev_hidden):
         # Repeat prev_hidded X times to append it to each of the annotation vectors (per batch element)
-        print('In SA forward...', prev_hidden.size())
         repeated_hidden = torch.cat(
             [
                 torch.repeat_interleave(hid, repeats=self.num_annotations, dim=0).unsqueeze(0)
