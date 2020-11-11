@@ -63,19 +63,28 @@ def predict_singleton(x,
     return predicted_indices
 
 
-def count_matches(targets, predictions):
+def count_matches(targets, predictions, debug=False):
     tp, fp, fn = 0, 0, 0  # tp=correctly predicted == hit,
                           # fp=prediction not part of targets,
                           # fn=absence of target token in predictions == miss
+    if debug:
+        print('Targets:\n', targets)
+        print('Preds:\n', predictions)
+
     for e in targets:
         if e in predictions:
+            if debug:
+                print('Hit:\t', e)
             tp += 1
             predictions.remove(e)
         else:
+            if debug:
+                print('Miss:\t', e)
             fn += 1
 
     fp = len(predictions)  # Leftover; if leftover had been part of predictions, it would not be in this list any longer
-
+    if debug:
+        print('Excesses:\t', predictions)
     return tp, fp, fn
 
 
@@ -93,16 +102,15 @@ def evaluation(
         max_nr_triples=3,
         end_token_idx=2,
         max_pred_len=30,
+        debug=False
      ):
-
-    print('Starting testing.')
 
     hits, excesses, misses, true_neg = [0] * len(len_x_val), [0] * len(len_x_val), [0] * len(len_x_val), [0] * len(len_x_val)
 
     # Perform eval steps for each nr of triples per sentence separately
     for nt in range(min_nr_triples, max_nr_triples + 1):
         i = nt - min_nr_triples  # Num triples per sentence starts at 1, while indexing starts at 0
-
+        print(min_nr_triples, max_nr_triples, nt, i, len_x_val)
         for element_idx in range(len_x_val[i]):
             print('Element idx:', str(element_idx) + ',', str(i) + '. Condition:', nt, 'triples per sentence.')
 
@@ -110,14 +118,15 @@ def evaluation(
             inputs = [val_data[i][element_idx]['text']]
 
             # Get indices of words
-            target_triples = [word2idx[x] if x in word2idx else 1 for x in val_data[i][element_idx]['triple']]
+            target_triples = [word2idx[x] if x in word2idx else 1 for x in val_data[i][element_idx]['triple']] + [word2idx['END']]
 
             # Get all contained triples in terms of indices
             target_triples = [target_triples[s:s+3] for s in range(0, len(target_triples), 3)]
 
-            # Print input sentences & triples
-            print('Input sentences:\n', inputs)
-            print('Target triples:\n', target_triples)
+            if debug:
+                # Print input sentences & triples
+                print('Input sentences:\n', inputs)
+                print('Target triples:\n', target_triples)
 
             # Predict
             predict_indices = predict_singleton(
@@ -135,7 +144,7 @@ def evaluation(
             # Get all contained triples in terms of indices
             pred_triples = [predict_indices[s:s + 3] for s in range(0, len(predict_indices), 3)]
 
-            tp, fp, fn = count_matches(target_triples, pred_triples)
+            tp, fp, fn = count_matches(target_triples, pred_triples, debug=debug)
 
             hits[i] += tp
             excesses[i] += fp

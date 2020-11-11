@@ -26,7 +26,7 @@ def training(train_data,
              device,
              minibatch_size=32,
              embedding_dim=300,
-             eval_frequency=10,  # Every how many minibatch_updates to run intermediate evaluation
+             eval_frequency=50,  # Every how many minibatch_updates to run intermediate evaluation
              learning_rate_en=0.00001,
              learning_rate_de=0.0001,
              teacher_forcing_max=1.,
@@ -39,6 +39,8 @@ def training(train_data,
 
     # Construct RDF vocab
     vocab_count, word2idx, idx2word = rdf_vocab_constructor(train_data)
+
+    end_token_idx = word2idx['END']
 
     # Construct tokenizer
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', device=device)
@@ -165,10 +167,11 @@ def training(train_data,
                 tokenizer,
                 len_x_val,
                 max_sen_len,
-                min_nr_triples=1,
-                max_nr_triples=3,
-                end_token_idx=2,
+                min_nr_triples=min_nr_triples,
+                max_nr_triples=max_nr_triples,
+                end_token_idx=end_token_idx,
                 max_pred_len=30,
+                debug=True
              )
             print('Hits:\t', hits)
             print('Excesses:\t', excesses)
