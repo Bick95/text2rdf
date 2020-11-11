@@ -11,7 +11,7 @@ from utils.evaluate import inference
 from utils.dataset import get_train_vocab, get_dev_vocab, get_test_vocab, print_stats
 
 # CUDA related
-device = torch.device('gpu')
+device = torch.device('cuda')
 print("Device:", device)
 
 
@@ -45,13 +45,6 @@ def main():
                                                                             max_nr_triples=MAX_NUM_TRIPLES
                                                                             )
     print('Train losses:', train_losses)
-
-    if str(device) == 'gpu':
-        torch.cuda.empty_cache()
-
-    y_true, y_pred = inference(dev, encoder, decoder, rdf_vocab, word2idx, idx2word)
-    metrics = evaluate(y_true, y_pred)
-    print(metrics)
 
 
 if __name__ == "__main__":

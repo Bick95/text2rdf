@@ -2,7 +2,7 @@ import copy
 import torch
 from sklearn import metrics as skmetrics
 
-from .train import predict
+from .predict import predict
 
 
 def inference(
@@ -60,8 +60,9 @@ def inference(
                 max_len=num_preds,      # Nr of tokens to be predicted
                 batch_size=batch_end - batch,          # 
                 compute_grads=False,     # 
-                targets=targets,        # 
-                return_textual=False     # Whether to return predictions in index-form (default) or as textual strings
+                targets=None,            #
+                return_textual=False,     # Whether to return predictions in index-form (default) or as textual strings
+                teacher_forcing=0.
             )
             
             y_true = y_true + targets_text
