@@ -10,15 +10,15 @@ from utils.train import training
 from utils.dataset import get_train_vocab, get_dev_vocab, get_test_vocab, print_stats
 
 # CUDA related
-device = torch.device('cuda')
+device = torch.device('cpu')
 print("Device:", device)
 
 
 # How many triples to train and test system on (min: 1, max: 7)
 MIN_NUM_TRIPLES = 1
-MAX_NUM_TRIPLES = 3
+MAX_NUM_TRIPLES = 2
 
-MINIBATCH_UPDATES = 1000
+MINIBATCH_UPDATES = 50
 
 
 def main():
@@ -36,14 +36,21 @@ def main():
     print_stats(train, dev, test, min_num_triples=MIN_NUM_TRIPLES, max_num_triples=MAX_NUM_TRIPLES)
 
     # Train
-    train_losses, val_losses, encoder, decoder = training(train,
-                                                          dev,
-                                                          device=device,
-                                                          minibatch_updates=MINIBATCH_UPDATES,
-                                                          min_nr_triples=MIN_NUM_TRIPLES,
-                                                          max_nr_triples=MAX_NUM_TRIPLES
-                                                          )
+    train_losses, val_losses, encoder, decoder, word2idx, idx2word= training(train,
+                                                                            dev,
+                                                                            device=device,
+                                                                            minibatch_updates=MINIBATCH_UPDATES,
+                                                                            min_nr_triples=MIN_NUM_TRIPLES,
+                                                                            max_nr_triples=MAX_NUM_TRIPLES
+                                                                            )
     print('Train losses:', train_losses)
+
+    if str(device) == 'cpu':
+      torch.cuda.empty_cache()
+
+    y_true, y_pred = inference(dev, encoder, decoder, rdf_vocab, word2idx, idx2word)
+    metrics = evaluate(y_true, y_pred)
+    print(metrics)
 
 
 if __name__ == "__main__":

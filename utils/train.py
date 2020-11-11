@@ -272,4 +272,4 @@ def training(train_data,
 
         teacher_forcing = max(teacher_forcing_min, teacher_forcing-teacher_forcing_dec)
 
-    return train_losses, val_losses, encoder, decoder
+    return train_losses, val_losses, encoder, decoder, word2idx, idx2word
