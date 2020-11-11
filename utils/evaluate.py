@@ -114,7 +114,7 @@ def evaluation(
             inputs = [val_data[i][element_idx]['text']]
 
             # Get indices of words
-            target_triples = [word2idx[x] for x in val_data[i][element_idx]['triple']]
+            target_triples = [word2idx[x] if x in word2idx else 1 for x in val_data[i][element_idx]['triple']]
 
             # Get all contained triples in terms of indices
             target_triples = [target_triples[s:s+3] for s in range(0, len(target_triples), 3)]
