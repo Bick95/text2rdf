@@ -15,7 +15,7 @@ from transformers import BertTokenizer, BertModel
 
 # Modules
 from .helpers import rdf_vocab_constructor, get_max_sentence_len
-from .evaluate import inference, evaluate
+from .evaluate import inference, evaluate, evaluation
 from models.decoder import Decoder
 from .predict import predict
 
@@ -91,7 +91,7 @@ def training(train_data,
 
         # Perform own train step for each nr of triples per sentence separately
         for nt in range(min_nr_triples, max_nr_triples + 1):
-            i = nt - 1  # Num triples per sentence starts at 1, while indexing starts at 0
+            i = nt - min_nr_triples  # Num triples per sentence starts at 1, while indexing starts at 0
             print('Epoch:', str(epoch) + ',', str(i) + '. Condition:', nt, 'triples per sentence.')
 
             # Sample minibatch indices
@@ -155,9 +155,25 @@ def training(train_data,
 
         # Intermediate evaluation
         if epoch % eval_frequency == 0:
-            y_true, y_pred = inference(val_data, encoder, decoder, rdf_vocab, word2idx, idx2word, device, tokenizer)
-            metrics = evaluate(y_true, y_pred)
-            print('Metrics:', metrics)
+            hits, excesses, misses, true_neg = evaluation(
+                val_data,
+                rdf_vocab,  # Decoder's word embeddings
+                word2idx,
+                device,
+                encoder,
+                decoder,
+                tokenizer,
+                len_x_val,
+                max_sen_len,
+                min_nr_triples=1,
+                max_nr_triples=3,
+                end_token_idx=2,
+                max_pred_len=30,
+             )
+            print('Hits:\t', hits)
+            print('Excesses:\t', excesses)
+            print('Misses:\t', misses)
+            print('True Neg:\t', true_neg)
 
         # Save losses
         train_losses[epoch] = train_loss

@@ -38,8 +38,7 @@ class Decoder(nn.Module):
                 embeddings,     # Word embeddings of most recently generated word (per batch element)
                 h_old           # Previous hidden state per batch element
                 ):
-
-        annotation_weights = self.attn(annotations, h_old.squeeze())
+        annotation_weights = self.attn(annotations, h_old.squeeze(dim=0))
         weighted_annotations = annotations * annotation_weights
         context_vectors = torch.sum(weighted_annotations, dim=1)
 
@@ -47,7 +46,7 @@ class Decoder(nn.Module):
         x = x.unsqueeze(1)  # Add une dimension for 'sequence'
 
         out, h = self.gru(x, h_old)
-        out = out.squeeze()
+        out = out.squeeze(dim=1)
         out = self.softmax(self.fc(self.relu(out)))
 
         return out, h

@@ -63,6 +63,10 @@ def predict(x,                # Batch of input sentences
     embedding = word_embeddings(torch.zeros([batch_size], dtype=int).to(device)).to(device)
 
     for t in range(max_len):
+        print('Dims - Train: ')
+        print('Ann:', annotations_padded.size())
+        print('Emb:', embedding.size())
+        print('Hid:', hidden.size())
         # Get decodings (aka prob distrib. over output vocab per batch element) for time step t
         prob_dist, hidden = decoder(annotations_padded,  # Static vector containing annotations per batch element
                                     embedding,  # Word embedding predicted last iteration (per batch element)
