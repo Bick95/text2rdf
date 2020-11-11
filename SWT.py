@@ -7,10 +7,11 @@ import torch
 
 # Modules
 from utils.train import training
+from utils.evaluate import inference
 from utils.dataset import get_train_vocab, get_dev_vocab, get_test_vocab, print_stats
 
 # CUDA related
-device = torch.device('cpu')
+device = torch.device('gpu')
 print("Device:", device)
 
 
@@ -45,8 +46,8 @@ def main():
                                                                             )
     print('Train losses:', train_losses)
 
-    if str(device) == 'cpu':
-      torch.cuda.empty_cache()
+    if str(device) == 'gpu':
+        torch.cuda.empty_cache()
 
     y_true, y_pred = inference(dev, encoder, decoder, rdf_vocab, word2idx, idx2word)
     metrics = evaluate(y_true, y_pred)

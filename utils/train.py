@@ -18,7 +18,7 @@ from .helpers import rdf_vocab_constructor, get_max_sentence_len
 from models.decoder import Decoder
 
 
-def predict(x,
+def predict(x,                # Batch of input sentences
             word_embeddings,  # Decoder's word embeddings
             word2idx,  #
             idx2word,  #
