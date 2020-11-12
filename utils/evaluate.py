@@ -226,9 +226,10 @@ def evaluation(
         else:
             cnt_made_up += 1
 
-    tp /= cnt_targets
-    fp /= cnt_targets
-    fn /= cnt_targets
+    # Summaries|normalizations could be computed later
+    # tp /= cnt_targets
+    # fp /= cnt_targets
+    # fn /= cnt_targets
 
     return tp, fp, fn, cnt_targets, cnt_made_up, conf_matrix
 
