@@ -14,7 +14,7 @@ class SoftAttention(nn.Module):
                  hidden_len  # Number of nodes in Decoder's hidden state weight matrix
                  ):
         super(SoftAttention, self).__init__()
-        # print('SA INIT')
+
         # Variables
         self.num_annotations = annotation_size[0]
         self.annotation_features = annotation_size[1]

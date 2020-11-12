@@ -52,7 +52,6 @@ def training(train_data,
              max_nr_triples=3
              ):
 
-
     # Construct RDF vocab
     vocab_count, word2idx, idx2word = rdf_vocab_constructor(train_data)
 

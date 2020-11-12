@@ -160,6 +160,7 @@ def evaluation(
 
     # Data structure that has triples as vocab and records mis|matches per triple (variant of confusion matrix)
     conf_matrix = {
+        # E.g.:
         # 'Dog eats food': { tp: 1,  - Correctly predicted this triple
         #                    fp: 0,  - Erroneously predicted this triple
         #                    fn: 2,  - Miss to predict this triple
