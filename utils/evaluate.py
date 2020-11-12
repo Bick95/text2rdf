@@ -211,7 +211,7 @@ def evaluation(
 
             conf_matrix = count_matches(target_triples, pred_triples, conf_matrix, debug=debug)
 
-    # Compute average TP, FP, and FN
+    # Compute summed TP, FP, and FN
     tp, fp, fn, cnt_targets, cnt_made_up = 0., 0., 0., 0., 0.
 
     print(conf_matrix)
