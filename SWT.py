@@ -27,7 +27,7 @@ print("Device:", device)
 MIN_NUM_TRIPLES = 1
 MAX_NUM_TRIPLES = 2
 
-MINIBATCH_UPDATES = 60
+MINIBATCH_UPDATES = 1000
 
 
 def main(minibatch_updates=None, min_num_triples=None, max_num_triples=None):
@@ -95,7 +95,7 @@ def main(minibatch_updates=None, min_num_triples=None, max_num_triples=None):
     # (in [min_num_triples, max_num_triples]), get the nr of train-/test instances
     len_x_test = [len(test_set) for test_set in test]
 
-    tp, fp, fn, conf_matrix = evaluation(
+    tp, fp, fn, cnt_targets, cnt_made_up, conf_matrix = evaluation(
         test,
         rdf_vocab,  # Decoder's word embeddings
         word2idx,
@@ -114,7 +114,7 @@ def main(minibatch_updates=None, min_num_triples=None, max_num_triples=None):
     )
     print('Final eval:')
     print('Conf matrix:', conf_matrix)
-    print('TP:', tp, 'FP:', fp, 'FN:', fn)
+    print('TP:', tp, 'FP:', fp, 'FN:', fn, 'Targets:', cnt_targets, 'Made up:', cnt_made_up)
 
     # Save test stats
     eval_data['test'] = {
@@ -122,7 +122,9 @@ def main(minibatch_updates=None, min_num_triples=None, max_num_triples=None):
         'FP': fp,
         'FN': fn,
         'prec': precision(tp, fp),
-        'rec': recall(tp, fn)
+        'rec': recall(tp, fn),
+        'cnt_targets': cnt_targets,
+        'cnt_made_up': cnt_made_up
     }
 
     # Save eval_data object in name with unique name

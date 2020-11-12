@@ -168,7 +168,7 @@ def training(train_data,
 
         # Intermediate evaluation
         if epoch % eval_frequency == 0:
-            tp, fp, fn, conf_matrix = evaluation(
+            tp, fp, fn, cnt_targets, cnt_made_up, conf_matrix = evaluation(
                 val_data,
                 rdf_vocab,  # Decoder's word embeddings
                 word2idx,
@@ -186,7 +186,7 @@ def training(train_data,
                 debug=False
              )
             print('Conf matrix:', conf_matrix)
-            print('TP:', tp, 'FP:', fp, 'FN:', fn)
+            print('TP:', tp, 'FP:', fp, 'FN:', fn, 'Targets:', cnt_targets, 'Made up:', cnt_made_up)
 
             # Save validation stats
             eval_data['val'][epoch] = {
@@ -194,7 +194,9 @@ def training(train_data,
                     'FP': fp,
                     'FN': fn,
                     'prec': precision(tp, fp),
-                    'rec': recall(tp, fn)
+                    'rec': recall(tp, fn),
+                    'cnt_targets': cnt_targets,
+                    'cnt_made_up': cnt_made_up
             }
 
         # Save losses
@@ -206,7 +208,7 @@ def training(train_data,
     eval_data['train_losses'] = train_losses
 
     # Final training set evaluation
-    tp, fp, fn, conf_matrix = evaluation(
+    tp, fp, fn, cnt_targets, cnt_made_up, conf_matrix = evaluation(
         train_data,
         rdf_vocab,  # Decoder's word embeddings
         word2idx,
@@ -225,7 +227,7 @@ def training(train_data,
     )
     print('Final train eval:')
     print('Conf matrix:', conf_matrix)
-    print('TP:', tp, 'FP:', fp, 'FN:', fn)
+    print('TP:', tp, 'FP:', fp, 'FN:', fn, 'Targets:', cnt_targets, 'Made up:', cnt_made_up)
 
     # Save train stats
     eval_data['train_eval'] = {
@@ -233,11 +235,13 @@ def training(train_data,
         'FP': fp,
         'FN': fn,
         'prec': precision(tp, fp),
-        'rec': recall(tp, fn)
+        'rec': recall(tp, fn),
+        'cnt_targets': cnt_targets,
+        'cnt_made_up': cnt_made_up
     }
 
     # Final validation evaluation
-    tp, fp, fn, conf_matrix = evaluation(
+    tp, fp, fn, cnt_targets, cnt_made_up, conf_matrix = evaluation(
         val_data,
         rdf_vocab,  # Decoder's word embeddings
         word2idx,
@@ -256,7 +260,7 @@ def training(train_data,
     )
     print('Final validation eval:')
     print('Conf matrix:', conf_matrix)
-    print('TP:', tp, 'FP:', fp, 'FN:', fn)
+    print('TP:', tp, 'FP:', fp, 'FN:', fn, 'Targets:', cnt_targets, 'Made up:', cnt_made_up)
 
     # Save validation stats
     eval_data['val'][epoch] = {
@@ -264,7 +268,9 @@ def training(train_data,
         'FP': fp,
         'FN': fn,
         'prec': precision(tp, fp),
-        'rec': recall(tp, fn)
+        'rec': recall(tp, fn),
+        'cnt_targets': cnt_targets,
+        'cnt_made_up': cnt_made_up
     }
 
     return eval_data, encoder, decoder, word2idx, idx2word, rdf_vocab, tokenizer, max_sen_len

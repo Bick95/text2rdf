@@ -75,7 +75,7 @@ def count_matches(targets, predictions, conf_matrix, debug=False):
         target = str(target_)
         # print('Target:', target)
         # target is a triple
-        if target in predictions:
+        if target_ in predictions:
             # Hit! Triple correctly extracted from sentence
             if debug:
                 print('Hit:\t', target)
@@ -212,7 +212,7 @@ def evaluation(
             conf_matrix = count_matches(target_triples, pred_triples, conf_matrix, debug=debug)
 
     # Compute average TP, FP, and FN
-    tp, fp, fn, cnt = 0., 0., 0., 0.
+    tp, fp, fn, cnt_targets, cnt_made_up = 0., 0., 0., 0., 0.
 
     print(conf_matrix)
 
@@ -222,11 +222,13 @@ def evaluation(
             tp += obj['TP']
             fp += obj['FP']
             fn += obj['FN']
-            cnt += 1
+            cnt_targets += 1
+        else:
+            cnt_made_up += 1
 
-    tp /= cnt
-    fp /= cnt
-    fn /= cnt
+    tp /= cnt_targets
+    fp /= cnt_targets
+    fn /= cnt_targets
 
-    return tp, fp, fn, conf_matrix
+    return tp, fp, fn, cnt_targets, cnt_made_up, conf_matrix
 
