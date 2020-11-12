@@ -14,7 +14,7 @@ from datetime import datetime
 import torch
 
 # Modules
-from utils.train import training, precision, recall
+from utils.train import training, precision, recall, f1_score
 from utils.evaluate import evaluation
 from utils.dataset import get_train_vocab, get_dev_vocab, get_test_vocab, print_stats
 
@@ -95,7 +95,7 @@ def main(minibatch_updates=None, min_num_triples=None, max_num_triples=None):
     # (in [min_num_triples, max_num_triples]), get the nr of train-/test instances
     len_x_test = [len(test_set) for test_set in test]
 
-    tp, fp, fn, cnt_targets, cnt_made_up, conf_matrix = evaluation(
+    tp, fp, fn, cnt_made_up, conf_matrix = evaluation(
         test,
         rdf_vocab,  # Decoder's word embeddings
         word2idx,
@@ -114,16 +114,20 @@ def main(minibatch_updates=None, min_num_triples=None, max_num_triples=None):
     )
     print('Final eval:')
     print('Conf matrix:', conf_matrix)
-    print('TP:', tp, 'FP:', fp, 'FN:', fn, 'Targets:', cnt_targets, 'Made up:', cnt_made_up)
+    print('TP:', tp, 'FP:', fp, 'FN:', fn, 'Made up:', cnt_made_up)
+
+    prec = precision(tp, fp)
+    rec = recall(tp, fn)
+    f1 = f1_score(prec, rec)
 
     # Save test stats
     eval_data['test'] = {
         'TP': tp,
         'FP': fp,
         'FN': fn,
-        'prec': precision(tp, fp),
-        'rec': recall(tp, fn),
-        'cnt_targets': cnt_targets,
+        'prec': prec,
+        'rec': rec,
+        'f1': f1,
         'cnt_made_up': cnt_made_up
     }
 

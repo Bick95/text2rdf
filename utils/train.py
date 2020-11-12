@@ -30,6 +30,10 @@ def recall(tp, fn):
     return tp / denominator if denominator > 0. else 0.
 
 
+def f1_score(prec, rec):
+    return 2. * (prec * rec) / (prec + rec)
+
+
 def training(train_data,
              val_data,
              eval_data,
@@ -62,6 +66,8 @@ def training(train_data,
                                        min_nr_triples=min_nr_triples,
                                        max_nr_triples=max_nr_triples)
     print("Max sentence len is:", max_sen_len)
+
+    eval_data['max_num_tokens'] = max_sen_len
 
     # Construct embeddings
     rdf_vocab = nn.Embedding(num_embeddings=vocab_count, embedding_dim=embedding_dim, padding_idx=0).to(device)
@@ -168,7 +174,7 @@ def training(train_data,
 
         # Intermediate evaluation
         if epoch % eval_frequency == 0:
-            tp, fp, fn, cnt_targets, cnt_made_up, conf_matrix = evaluation(
+            tp, fp, fn, cnt_made_up, conf_matrix = evaluation(
                 val_data,
                 rdf_vocab,  # Decoder's word embeddings
                 word2idx,
@@ -186,16 +192,20 @@ def training(train_data,
                 debug=False
              )
             print('Conf matrix:', conf_matrix)
-            print('TP:', tp, 'FP:', fp, 'FN:', fn, 'Targets:', cnt_targets, 'Made up:', cnt_made_up)
+            print('TP:', tp, 'FP:', fp, 'FN:', fn, 'Made up:', cnt_made_up)
+
+            prec = precision(tp, fp)
+            rec = recall(tp, fn)
+            f1 = f1_score(prec, rec)
 
             # Save validation stats
             eval_data['val'][epoch] = {
                     'TP': tp,
                     'FP': fp,
                     'FN': fn,
-                    'prec': precision(tp, fp),
-                    'rec': recall(tp, fn),
-                    'cnt_targets': cnt_targets,
+                    'prec': prec,
+                    'rec': rec,
+                    'f1': f1,
                     'cnt_made_up': cnt_made_up
             }
 
@@ -208,7 +218,7 @@ def training(train_data,
     eval_data['train_losses'] = train_losses
 
     # Final training set evaluation
-    tp, fp, fn, cnt_targets, cnt_made_up, conf_matrix = evaluation(
+    tp, fp, fn, cnt_made_up, conf_matrix = evaluation(
         train_data,
         rdf_vocab,  # Decoder's word embeddings
         word2idx,
@@ -227,21 +237,25 @@ def training(train_data,
     )
     print('Final train eval:')
     print('Conf matrix:', conf_matrix)
-    print('TP:', tp, 'FP:', fp, 'FN:', fn, 'Targets:', cnt_targets, 'Made up:', cnt_made_up)
+    print('TP:', tp, 'FP:', fp, 'FN:', fn, 'Made up:', cnt_made_up)
+
+    prec = precision(tp, fp)
+    rec = recall(tp, fn)
+    f1 = f1_score(prec, rec)
 
     # Save train stats
     eval_data['train_eval'] = {
         'TP': tp,
         'FP': fp,
         'FN': fn,
-        'prec': precision(tp, fp),
-        'rec': recall(tp, fn),
-        'cnt_targets': cnt_targets,
+        'prec': prec,
+        'rec': rec,
+        'f1': f1,
         'cnt_made_up': cnt_made_up
     }
 
     # Final validation evaluation
-    tp, fp, fn, cnt_targets, cnt_made_up, conf_matrix = evaluation(
+    tp, fp, fn, cnt_made_up, conf_matrix = evaluation(
         val_data,
         rdf_vocab,  # Decoder's word embeddings
         word2idx,
@@ -260,16 +274,20 @@ def training(train_data,
     )
     print('Final validation eval:')
     print('Conf matrix:', conf_matrix)
-    print('TP:', tp, 'FP:', fp, 'FN:', fn, 'Targets:', cnt_targets, 'Made up:', cnt_made_up)
+    print('TP:', tp, 'FP:', fp, 'FN:', fn, 'Made up:', cnt_made_up)
+
+    prec = precision(tp, fp)
+    rec = recall(tp, fn)
+    f1 = f1_score(prec, rec)
 
     # Save validation stats
     eval_data['val'][epoch] = {
         'TP': tp,
         'FP': fp,
         'FN': fn,
-        'prec': precision(tp, fp),
-        'rec': recall(tp, fn),
-        'cnt_targets': cnt_targets,
+        'prec': prec,
+        'rec': rec,
+        'f1': f1,
         'cnt_made_up': cnt_made_up
     }
 

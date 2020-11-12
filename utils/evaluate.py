@@ -162,7 +162,7 @@ def evaluation(
     conf_matrix = {
         # 'Dog eats food': { tp: 1,  - Correctly predicted this triple
         #                    fp: 0,  - Erroneously predicted this triple
-        #                    fn: 0,  - Miss to predict this triple
+        #                    fn: 2,  - Miss to predict this triple
         #                    is_in_targets: true - Is triple contained in targets or made up by decoder?
         #                   }
     }
@@ -212,24 +212,19 @@ def evaluation(
             conf_matrix = count_matches(target_triples, pred_triples, conf_matrix, debug=debug)
 
     # Compute summed TP, FP, and FN
-    tp, fp, fn, cnt_targets, cnt_made_up = 0., 0., 0., 0., 0.
-
-    print(conf_matrix)
+    tp, fp, fn, cnt_made_up = 0., 0., 0., 0.
 
     for triple_key in conf_matrix:
-        obj = conf_matrix[triple_key]
-        if obj['is_in_targets']:
-            tp += obj['TP']
-            fp += obj['FP']
-            fn += obj['FN']
-            cnt_targets += 1
-        else:
-            cnt_made_up += 1
+        obj = conf_matrix[triple_key]  # Retrieve stats for given triple
 
-    # Summaries|normalizations could be computed later
-    # tp /= cnt_targets
-    # fp /= cnt_targets
-    # fn /= cnt_targets
+        # Accumulate stats over all triples
+        tp += obj['TP']
+        fp += obj['FP']
+        fn += obj['FN']
 
-    return tp, fp, fn, cnt_targets, cnt_made_up, conf_matrix
+        if not obj['is_in_targets']:
+            # Nr of times that triples have been "made up" by system
+            cnt_made_up += obj['FP']
+
+    return tp, fp, fn, cnt_made_up, conf_matrix
 
