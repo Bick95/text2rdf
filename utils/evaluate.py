@@ -1,8 +1,4 @@
-import copy
 import torch
-from sklearn import metrics as skmetrics
-
-from .predict import predict
 
 
 def predict_singleton(x,
@@ -63,35 +59,89 @@ def predict_singleton(x,
     return predicted_indices
 
 
-def count_matches(targets, predictions, debug=False):
-    tp, fp, fn = 0, 0, 0  # tp=correctly predicted == hit,
-                          # fp=prediction not part of targets,
-                          # fn=absence of target token in predictions == miss
+def count_matches(targets, predictions, conf_matrix, debug=False):
+
+    # This function takes target triples (targets) to be extracted from a
+    # single input sentence and the corresponding predicted triples created
+    # for said sentence. Also, it takes a confusion-matrix to encode true
+    # positives, false positives, and false negatives per triple.
+    # It returns the updated confusion-matrix dictionary.
+
     if debug:
         print('Targets:\n', targets)
         print('Preds:\n', predictions)
 
-    for e in targets:
-        if e in predictions:
+    for target_ in targets:
+        target = str(target_)
+        # print('Target:', target)
+        # target is a triple
+        if target in predictions:
+            # Hit! Triple correctly extracted from sentence
             if debug:
-                print('Hit:\t', e)
-            tp += 1
-            predictions.remove(e)
-        else:
-            if debug:
-                print('Miss:\t', e)
-            fn += 1
+                print('Hit:\t', target)
 
-    fp = len(predictions)  # Leftover; if leftover had been part of predictions, it would not be in this list any longer
+            # Record hit (=true positive)
+            if target in conf_matrix:
+                # Triple is part of dictionary already, increment its hit/true-positive-count
+                conf_matrix[target]['TP'] += 1
+                conf_matrix[target]['is_in_targets'] = True  # Make sure it's marked as part of reference solution
+            else:
+                # First time that target triple is encountered - add it to conf-matrix
+                conf_matrix[target] = {
+                    'TP': 1,
+                    'FP': 0,
+                    'FN': 0,
+                    'is_in_targets': True
+                }
+
+            # Don't match same token twice
+            predictions.remove(target_)
+
+        else:
+            # Target has not been predicted, it's a miss (=false negative)
+            if debug:
+                print('Miss:\t', target)
+
+            # Record miss (=false negative)
+            if target in conf_matrix:
+                # Triple is part of dictionary already, increment its hit/true-positive-count
+                conf_matrix[target]['FN'] += 1
+                conf_matrix[target]['is_in_targets'] = True  # Make sure it's marked as part of reference solution
+            else:
+                # First time that target triple is encountered - add it to conf-matrix
+                conf_matrix[target] = {
+                    'TP': 0,
+                    'FP': 0,
+                    'FN': 1,
+                    'is_in_targets': True  # It has not been observed as a target yet
+                }
+
     if debug:
         print('Excesses:\t', predictions)
-    return tp, fp, fn
+
+    for leftover_ in predictions:
+        leftover = str(leftover_)
+        # Triple has been predicted incorrectly - it's not part of reference solution for given sentence
+        if leftover in conf_matrix:
+            # Triple is part of dictionary already, increment its false-positive-count
+            conf_matrix[leftover]['FP'] += 1
+        else:
+            # First time that predicted triple is encountered - add it to conf-matrix
+            conf_matrix[leftover] = {
+                'TP': 0,
+                'FP': 1,
+                'FN': 0,
+                'is_in_targets': False
+            }
+
+    return conf_matrix
 
 
 def evaluation(
         val_data,
         rdf_vocab,  # Decoder's word embeddings
         word2idx,
+        idx2word,
         device,
         encoder,
         decoder,
@@ -105,14 +155,24 @@ def evaluation(
         debug=False
      ):
 
-    hits, excesses, misses, true_neg = [0] * len(len_x_val), [0] * len(len_x_val), [0] * len(len_x_val), [0] * len(len_x_val)
+    # Returns average TP, FP, and FN (computed over all triples contained
+    # in target set) and confusion matrix.
+
+    # Data structure that has triples as vocab and records mis|matches per triple (variant of confusion matrix)
+    conf_matrix = {
+        # 'Dog eats food': { tp: 1,  - Correctly predicted this triple
+        #                    fp: 0,  - Erroneously predicted this triple
+        #                    fn: 0,  - Miss to predict this triple
+        #                    is_in_targets: true - Is triple contained in targets or made up by decoder?
+        #                   }
+    }
 
     # Perform eval steps for each nr of triples per sentence separately
     for nt in range(min_nr_triples, max_nr_triples + 1):
         i = nt - min_nr_triples  # Num triples per sentence starts at 1, while indexing starts at 0
-        print(min_nr_triples, max_nr_triples, nt, i, len_x_val)
+        # print(min_nr_triples, max_nr_triples, nt, i, len_x_val)
         for element_idx in range(len_x_val[i]):
-            print('Element idx:', str(element_idx) + ',', str(i) + '. Condition:', nt, 'triples per sentence.')
+            # print('Element idx:', str(element_idx) + ',', str(i) + '. Condition:', nt, 'triples per sentence.')
 
             # Construct pseudo-minibatch
             inputs = [val_data[i][element_idx]['text']]
@@ -127,6 +187,7 @@ def evaluation(
                 # Print input sentences & triples
                 print('Input sentences:\n', inputs)
                 print('Target triples:\n', target_triples)
+                print('Targets sentences:', [[idx2word[index] for index in lst] for lst in target_triples])
 
             # Predict
             predict_indices = predict_singleton(
@@ -144,11 +205,28 @@ def evaluation(
             # Get all contained triples in terms of indices
             pred_triples = [predict_indices[s:s + 3] for s in range(0, len(predict_indices), 3)]
 
-            tp, fp, fn = count_matches(target_triples, pred_triples, debug=debug)
+            if debug:
+                print('Pred triples: ', pred_triples)
+                print('Predictions:', [[idx2word[index] for index in lst] for lst in pred_triples])
 
-            hits[i] += tp
-            excesses[i] += fp
-            misses[i] += fn
+            conf_matrix = count_matches(target_triples, pred_triples, conf_matrix, debug=debug)
 
-    return hits, excesses, misses, true_neg
+    # Compute average TP, FP, and FN
+    tp, fp, fn, cnt = 0., 0., 0., 0.
+
+    print(conf_matrix)
+
+    for triple_key in conf_matrix:
+        obj = conf_matrix[triple_key]
+        if obj['is_in_targets']:
+            tp += obj['TP']
+            fp += obj['FP']
+            fn += obj['FN']
+            cnt += 1
+
+    tp /= cnt
+    fp /= cnt
+    fn /= cnt
+
+    return tp, fp, fn, conf_matrix
 

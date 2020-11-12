@@ -15,13 +15,24 @@ from transformers import BertTokenizer, BertModel
 
 # Modules
 from .helpers import rdf_vocab_constructor, get_max_sentence_len
-from .evaluate import inference, evaluate, evaluation
+from .evaluate import evaluation
 from models.decoder import Decoder
 from .predict import predict
 
 
+def precision(tp, fp):
+    denominator = (tp + fp)
+    return tp / denominator if denominator > 0. else 0.
+
+
+def recall(tp, fn):
+    denominator = (tp + fn)
+    return tp / denominator if denominator > 0. else 0.
+
+
 def training(train_data,
              val_data,
+             eval_data,
              minibatch_updates,
              device,
              minibatch_size=32,
@@ -78,7 +89,7 @@ def training(train_data,
     len_x_val = [len(val_set) for val_set in val_data]
 
     # Development of both train- and validation losses over course of training
-    train_losses, val_losses = [0.] * minibatch_updates, [0.] * minibatch_updates
+    train_losses = [0.] * minibatch_updates
 
     print('Starting training.')
 
@@ -157,10 +168,11 @@ def training(train_data,
 
         # Intermediate evaluation
         if epoch % eval_frequency == 0:
-            hits, excesses, misses, true_neg = evaluation(
+            tp, fp, fn, conf_matrix = evaluation(
                 val_data,
                 rdf_vocab,  # Decoder's word embeddings
                 word2idx,
+                idx2word,
                 device,
                 encoder,
                 decoder,
@@ -171,16 +183,88 @@ def training(train_data,
                 max_nr_triples=max_nr_triples,
                 end_token_idx=end_token_idx,
                 max_pred_len=30,
-                debug=True
+                debug=False
              )
-            print('Hits:\t', hits)
-            print('Excesses:\t', excesses)
-            print('Misses:\t', misses)
-            print('True Neg:\t', true_neg)
+            print('Conf matrix:', conf_matrix)
+            print('TP:', tp, 'FP:', fp, 'FN:', fn)
+
+            # Save validation stats
+            eval_data['val'][epoch] = {
+                    'TP': tp,
+                    'FP': fp,
+                    'FN': fn,
+                    'prec': precision(tp, fp),
+                    'rec': recall(tp, fn)
+            }
 
         # Save losses
-        train_losses[epoch] = train_loss
+        train_losses[epoch] = train_loss  # Train loss accumulated over all nrs of triples per sentence
 
         teacher_forcing = max(teacher_forcing_min, teacher_forcing-teacher_forcing_dec)
 
-    return train_losses, val_losses, encoder, decoder, word2idx, idx2word
+    # Save training loss development
+    eval_data['train_losses'] = train_losses
+
+    # Final training set evaluation
+    tp, fp, fn, conf_matrix = evaluation(
+        train_data,
+        rdf_vocab,  # Decoder's word embeddings
+        word2idx,
+        idx2word,
+        device,
+        encoder,
+        decoder,
+        tokenizer,
+        len_x_val,
+        max_sen_len,
+        min_nr_triples=min_nr_triples,
+        max_nr_triples=max_nr_triples,
+        end_token_idx=end_token_idx,
+        max_pred_len=30,
+        debug=True
+    )
+    print('Final train eval:')
+    print('Conf matrix:', conf_matrix)
+    print('TP:', tp, 'FP:', fp, 'FN:', fn)
+
+    # Save train stats
+    eval_data['train_eval'] = {
+        'TP': tp,
+        'FP': fp,
+        'FN': fn,
+        'prec': precision(tp, fp),
+        'rec': recall(tp, fn)
+    }
+
+    # Final validation evaluation
+    tp, fp, fn, conf_matrix = evaluation(
+        val_data,
+        rdf_vocab,  # Decoder's word embeddings
+        word2idx,
+        idx2word,
+        device,
+        encoder,
+        decoder,
+        tokenizer,
+        len_x_val,
+        max_sen_len,
+        min_nr_triples=min_nr_triples,
+        max_nr_triples=max_nr_triples,
+        end_token_idx=end_token_idx,
+        max_pred_len=30,
+        debug=True
+    )
+    print('Final validation eval:')
+    print('Conf matrix:', conf_matrix)
+    print('TP:', tp, 'FP:', fp, 'FN:', fn)
+
+    # Save validation stats
+    eval_data['val'][epoch] = {
+        'TP': tp,
+        'FP': fp,
+        'FN': fn,
+        'prec': precision(tp, fp),
+        'rec': recall(tp, fn)
+    }
+
+    return eval_data, encoder, decoder, word2idx, idx2word, rdf_vocab, tokenizer, max_sen_len
