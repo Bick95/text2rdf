@@ -2,6 +2,9 @@
 # coding: utf-8
 
 # Imports
+# Read args
+import sys
+
 # Saving
 import json
 import random
@@ -27,16 +30,28 @@ MAX_NUM_TRIPLES = 2
 MINIBATCH_UPDATES = 60
 
 
-def main():
+def main(minibatch_updates=None, min_num_triples=None, max_num_triples=None):
 
     # Free CUDA memory
     if str(device) == 'cuda':
         torch.cuda.empty_cache()
 
+    if not minibatch_updates:
+        minibatch_updates = MINIBATCH_UPDATES
+        print('Updated minibatch_updates:', minibatch_updates)
+
+    if not min_num_triples:
+        min_num_triples = MIN_NUM_TRIPLES
+        print('Updated min_num_triples:', min_num_triples)
+
+    if not max_num_triples:
+        max_num_triples = MAX_NUM_TRIPLES
+        print('Updated max_num_triples:', max_num_triples)
+
     eval_data = {
-        'min_num_triples': MIN_NUM_TRIPLES,
-        'max_num_triples': MAX_NUM_TRIPLES,
-        'minibatch_updates': MINIBATCH_UPDATES,
+        'min_num_triples': min_num_triples,
+        'max_num_triples': max_num_triples,
+        'minibatch_updates': minibatch_updates,
         # 'train_losses': train_losses,
         'val': {
         #    epoch: {
@@ -57,12 +72,12 @@ def main():
     }
 
     # Get datasets
-    train, train_stats = get_train_vocab(min_num_triples=MIN_NUM_TRIPLES, max_num_triples=MAX_NUM_TRIPLES)
-    test, test_stats = get_test_vocab(min_num_triples=MIN_NUM_TRIPLES, max_num_triples=MAX_NUM_TRIPLES)
+    train, train_stats = get_train_vocab(min_num_triples=min_num_triples, max_num_triples=max_num_triples)
+    test, test_stats = get_test_vocab(min_num_triples=min_num_triples, max_num_triples=max_num_triples)
     train, train_stats, dev, dev_stats = get_dev_vocab(train, train_stats,
-                                                       min_num_triples=MIN_NUM_TRIPLES, max_num_triples=MAX_NUM_TRIPLES)
+                                                       min_num_triples=min_num_triples, max_num_triples=max_num_triples)
 
-    print_stats(train, dev, test, min_num_triples=MIN_NUM_TRIPLES, max_num_triples=MAX_NUM_TRIPLES)
+    print_stats(train, dev, test, min_num_triples=min_num_triples, max_num_triples=max_num_triples)
 
     # Train
     eval_data, encoder, decoder, word2idx, idx2word, rdf_vocab,\
@@ -70,14 +85,14 @@ def main():
                                           dev,
                                           eval_data,
                                           device=device,
-                                          minibatch_updates=MINIBATCH_UPDATES,
-                                          min_nr_triples=MIN_NUM_TRIPLES,
-                                          max_nr_triples=MAX_NUM_TRIPLES
+                                          minibatch_updates=minibatch_updates,
+                                          min_nr_triples=min_num_triples,
+                                          max_nr_triples=max_num_triples
                                          )
     print('Train losses:', eval_data['train_losses'])
 
     # For test data & for all number of tuples per sentence
-    # (in [MIN_NUM_TRIPLES, MAX_NUM_TRIPLES]), get the nr of train-/test instances
+    # (in [min_num_triples, max_num_triples]), get the nr of train-/test instances
     len_x_test = [len(test_set) for test_set in test]
 
     tp, fp, fn, conf_matrix = evaluation(
@@ -91,8 +106,8 @@ def main():
         tokenizer,
         len_x_test,
         max_sen_len,
-        min_nr_triples=MIN_NUM_TRIPLES,
-        max_nr_triples=MAX_NUM_TRIPLES,
+        min_nr_triples=min_num_triples,
+        max_nr_triples=max_num_triples,
         end_token_idx=word2idx['END'],
         max_pred_len=30,
         debug=True
@@ -118,4 +133,15 @@ def main():
 
 if __name__ == "__main__":
     # execute only if run as a script
-    main()
+    minibatch_updates = None
+    min_num_triples = None
+    max_num_triples = None
+
+    if len(sys.argv) > 1:
+        minibatch_updates = int(sys.argv[1])
+    if len(sys.argv) > 2:
+        min_num_triples = int(sys.argv[2])
+    if len(sys.argv) > 3:
+        max_num_triples = int(sys.argv[3])
+
+    main(minibatch_updates, min_num_triples, max_num_triples)
