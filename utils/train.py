@@ -31,7 +31,8 @@ def recall(tp, fn):
 
 
 def f1_score(prec, rec):
-    return 2. * (prec * rec) / (prec + rec)
+    denominator = (prec + rec)
+    return 2. * (prec * rec) / denominator if denominator > 0. else 0.
 
 
 def training(train_data,

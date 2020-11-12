@@ -178,7 +178,7 @@ def evaluation(
             inputs = [val_data[i][element_idx]['text']]
 
             # Get indices of words
-            target_triples = [word2idx[x] if x in word2idx else 1 for x in val_data[i][element_idx]['triple']] + [word2idx['END']]
+            target_triples = [word2idx[x] if x in word2idx else 1 for x in val_data[i][element_idx]['triple']]  #+ [word2idx['END']]
 
             # Get all contained triples in terms of indices
             target_triples = [target_triples[s:s+3] for s in range(0, len(target_triples), 3)]
@@ -201,6 +201,10 @@ def evaluation(
                 max_sen_len=max_sen_len,
                 end_token_idx=end_token_idx
             )
+
+            # Filter out end token
+            if [end_token_idx] in predict_indices:
+                predict_indices.remove([end_token_idx])
 
             # Get all contained triples in terms of indices
             pred_triples = [predict_indices[s:s + 3] for s in range(0, len(predict_indices), 3)]

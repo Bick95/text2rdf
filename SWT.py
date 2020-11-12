@@ -27,7 +27,7 @@ print("Device:", device)
 MIN_NUM_TRIPLES = 1
 MAX_NUM_TRIPLES = 2
 
-MINIBATCH_UPDATES = 1000
+MINIBATCH_UPDATES = 500
 
 
 def main(minibatch_updates=None, min_num_triples=None, max_num_triples=None):
