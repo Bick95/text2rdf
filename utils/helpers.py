@@ -34,18 +34,3 @@ def get_max_sentence_len(raw_vocab, tokenizer, min_nr_triples=1, max_nr_triples=
                 print('Corresponding triple:', entry['triple'])
                 longest_len = l
     return longest_len
-
-
-# Function for calculating the BLEU score for multiple sentence.
-def calculate_bleu(data, train, dev, test, model, max_len=7):
-    trgs = []
-    pred_trgs = []
-    src = dev
-    trg = test
-    # Get the data and feed it into pred_trg after Seq2seq
-    # pred_trg = pred_trg[:-1]
-    # pred_trgs.append(pred_trg)
-    # trgs.append([trg])
-
-    return corpus_bleu(pred_trgs, trgs)
-
