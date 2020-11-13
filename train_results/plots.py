@@ -36,10 +36,12 @@ class StoreDict(argparse.Action):
         setattr(namespace, self.dest, dict(values))
 
 def plot_m_sigma(data, target_field, batch_size = 1, label='data', sigma=1):
+	condition=[]
 
 	for i, idx in enumerate(range(0, len(data), batch_size)):
 
 		processed_data = []
+		testing_data = []
 
 		for run in data[idx:idx+batch_size]:
 
@@ -52,16 +54,27 @@ def plot_m_sigma(data, target_field, batch_size = 1, label='data', sigma=1):
 					)
 				])
 			)
+			testing_data.append(run['test'][target_field])
+
+
+		condition.append(run['max_num_triples'])
+		
+		print(condition)
 
 		processed_data = np.stack(processed_data)
+		testing_data = np.stack(testing_data)
+
+		p=testing_data.mean(0)
 
 		m = processed_data.mean(0)
 		sigma = sigma * np.std(processed_data, axis=0)
 
 		x = np.arange(m.size)
 
-		plt.plot(x, m, label = f'{label}_{i}')
-		plt.fill_between(x, m+sigma, m-sigma, label = f'{label}_{i}_std', alpha = 0.5)
+		plt.plot(x*50, m, label = f'{label} 1-{condition[i]}')
+		plt.fill_between(x*50, m+sigma, m-sigma, label = f'{label} 1-{condition[i]} std', alpha = 0.5)
+
+		plt.scatter(4999, p, label = f'Testing 1-{condition[i]}', marker='x')
 
 if __name__ == '__main__':
 
@@ -104,12 +117,18 @@ if __name__ == '__main__':
 
 	parser.add_argument(
 		'--pars',
-        type = lambda x : (x.split(':', 1)[0], cast_str(x.split(':', 1)[-1], (int, float))),
-        nargs = '+',
-        action = StoreDict,
-        default = dict(),
-        help = 'Extra pars for function (series of key:value)'
-    )
+		type = lambda x : (x.split(':', 1)[0], cast_str(x.split(':', 1)[-1], (int, float))),
+		nargs = '+',
+		action = StoreDict,
+		default = dict(),
+		help = 'Extra pars for function (series of key:value)'
+	)
+
+	parser.add_argument(
+		'--measure',
+		default = 'measure',
+		help = 'y axis label in plot'
+	)
 
 	args = parser.parse_args()
 
@@ -123,14 +142,16 @@ if __name__ == '__main__':
 	# Add labels
 
 	plt.title(args.title)
+	plt.xlabel('Epoch')
+	plt.ylabel(str(args.measure)+' value')
 
-	plt.legend()
+	plt.legend(fontsize='small', ncol=2)
+	#plt.tight_layout()
 
 	# Show and save
+	if args.save is not None:
+		plt.savefig(args.save, dpi = 600, bbox_inches = 'tight')
 
 	if args.show:
 		plt.tight_layout()
 		plt.show()
-
-	if args.save is not None:
-		plt.save_fig(args.save, dpi = 400, bbox_inches = 'tight')
