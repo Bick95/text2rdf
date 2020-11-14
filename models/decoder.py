@@ -43,7 +43,7 @@ class Decoder(nn.Module):
         context_vectors = torch.sum(weighted_annotations, dim=1)
 
         x = torch.cat((context_vectors, embeddings), dim=1)
-        x = x.unsqueeze(1)  # Add une dimension for 'sequence'
+        x = x.unsqueeze(1)  # Add one dimension for 'sequence'
 
         out, h = self.gru(x, h_old)
         out = out.squeeze(dim=1)
