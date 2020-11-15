@@ -37,6 +37,7 @@ class StoreDict(argparse.Action):
 
 def plot_m_sigma(data, target_field, batch_size = 1, label='data', sigma=1):
 	condition=[]
+	p = []
 
 	for i, idx in enumerate(range(0, len(data), batch_size)):
 
@@ -58,13 +59,11 @@ def plot_m_sigma(data, target_field, batch_size = 1, label='data', sigma=1):
 
 
 		condition.append(run['max_num_triples'])
-		
-		print(condition)
 
 		processed_data = np.stack(processed_data)
 		testing_data = np.stack(testing_data)
 
-		p=testing_data.mean(0)
+		p.append(testing_data.mean(0))
 
 		m = processed_data.mean(0)
 		sigma = sigma * np.std(processed_data, axis=0)
@@ -74,7 +73,10 @@ def plot_m_sigma(data, target_field, batch_size = 1, label='data', sigma=1):
 		plt.plot(x*50, m, label = f'{label} 1-{condition[i]}')
 		plt.fill_between(x*50, m+sigma, m-sigma, label = f'{label} 1-{condition[i]} std', alpha = 0.5)
 
-		plt.scatter(4999, p, label = f'Testing 1-{condition[i]}', marker='x')
+
+	plt.scatter(4999, p[0], label = f'Testing 1-{condition[0]}', s=30, marker='x', c=['#1f77b4'])
+	plt.scatter(4999, p[1], label = f'Testing 1-{condition[1]}', s=30, marker='x', c=['#ff7f0e'])
+	plt.scatter(4999, p[2], label = f'Testing 1-{condition[2]}', s=30, marker='x', c=['#2ca02c'])
 
 if __name__ == '__main__':
 
@@ -144,6 +146,7 @@ if __name__ == '__main__':
 	plt.title(args.title)
 	plt.xlabel('Epoch')
 	plt.ylabel(str(args.measure)+' value')
+	plt.ylim((0,1))
 
 	plt.legend(fontsize='small', ncol=2)
 	#plt.tight_layout()
