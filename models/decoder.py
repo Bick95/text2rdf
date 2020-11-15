@@ -35,39 +35,24 @@ class Decoder(nn.Module):
 
     def forward(self,
                 annotations,    # Static annotation vectors (for each batch element)
-                embedding,      # Word embedding of most recently generated word (per batch element)
-                h_old           # Previous hidden state (per batch element)
+                embeddings,     # Word embeddings of most recently generated word (per batch element)
+                h_old           # Previous hidden state per batch element
                 ):
+        annotation_weights = self.attn(annotations, h_old.squeeze(dim=0))
+        weighted_annotations = annotations * annotation_weights
+        context_vectors = torch.sum(weighted_annotations, dim=1)
 
-        # Note:
-        # Unsqueeze/Squeeze operations done to add/remove extra 'sequence' dimension required for GRU layer;
-        # There is no intrinsic sequence dimension in our data since we always only pass data through the GRU layer
-        # for a single time step at a time before having to re-evaluate the attention weights.
+        x = torch.cat((context_vectors, embeddings), dim=1)
+        x = x.unsqueeze(1)  # Add one dimension for 'sequence'
 
-        # Compute attention weights (1 per annotation vector (and per batch element))
-        attention_weights = self.attn(annotations, h_old.squeeze(dim=0))
-
-        # Weight individual annotation vectors by respective attention weights
-        weighted_annotations = annotations * attention_weights
-
-        # Compute weighted average annotation vector (=context vector) by summing over weighted annotation vectors
-        context_vector = torch.sum(weighted_annotations, dim=1)
-
-        # Append context vector (per batch element) by wordembedding predicted during last time step (per batch element)
-        x = torch.cat((context_vector, embedding), dim=1)
-        x = x.unsqueeze(1)
-
-        # Feed context vector + wordembedding (per batch element) through GRU layer
         out, h = self.gru(x, h_old)
         out = out.squeeze(dim=1)
+        out = self.softmax(self.fc(self.relu(out)))
 
-        # Computed probability distribution over output vocab (per batch element)
-        prob_dist = self.softmax(self.fc(self.relu(out)))
-
-        return prob_dist, h
+        return out, h
 
     def init_hidden(self, annotation_vectors):
-        # Mean annotation vector per batch element
+        # Mean of annotation vector per batch element
         # Assumes that number of hidden nodes == number annotation features
         hidden = torch.mean(annotation_vectors, dim=1)  # .to(device)
         return hidden
