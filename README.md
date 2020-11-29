@@ -42,3 +42,6 @@ refers to the maximal number of target triples per input sentence that a system 
 
 An object containing evaluation statistics collected both throughout and after the end of training is saved at the end of 
 training. Examples of this, as well as recorded indicative print-statements collected for some trained models throughout training, can be found in the folder `train_results`.
+
+# Further Information
+For more information on this project, please be referred to the [attached project report](https://github.com/Bick95/text2rdf/blob/main/text2rdf_Semantic_Web_Technology_Project_Report.pdf). 
